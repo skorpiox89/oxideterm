@@ -295,7 +295,7 @@ use self::session_manager::{SessionManagerState, SessionManagerWorkspaceEvent};
 use self::sidebar::AiInlinePanelState;
 #[cfg(test)]
 use self::sidebar::AiStreamDeliveryEvent;
-use self::sidebar::{ActiveSessionSidebarViewMode, SidebarSection};
+use self::sidebar::{ActiveSessionSidebarViewMode, SavedSidebarMenu, SidebarSection};
 use self::sidebar::{
     AiCompactionDelivery, AiCompactionDeliverySender, AiStreamDelivery, AiStreamDeliverySender,
     ai_now_ms,
@@ -387,6 +387,9 @@ const DETACHED_LOCAL_TERMINAL_LIST_OVERSCAN: usize = 4;
 const ACTIVE_SESSION_SIDEBAR_LIST_INITIAL_ITEM_COUNT: usize = 0;
 const ACTIVE_SESSION_SIDEBAR_LIST_ESTIMATED_HEIGHT: f32 = 40.0;
 const ACTIVE_SESSION_SIDEBAR_LIST_OVERSCAN: usize = 8;
+const SAVED_SIDEBAR_LIST_INITIAL_ITEM_COUNT: usize = 0;
+const SAVED_SIDEBAR_LIST_ESTIMATED_HEIGHT: f32 = 28.0;
+const SAVED_SIDEBAR_LIST_OVERSCAN: usize = 8;
 const ACTIVE_SESSION_FOCUS_LIST_ESTIMATED_HEIGHT: f32 = 76.0;
 const OXIDE_EXPORT_CONNECTION_LIST_INITIAL_ITEM_COUNT: usize = 0;
 const OXIDE_EXPORT_CONNECTION_LIST_ESTIMATED_HEIGHT: f32 = 58.0;
@@ -819,6 +822,15 @@ pub(crate) struct WorkspaceApp {
     active_session_sidebar_focused_node_id: Option<NodeId>,
     active_session_sidebar_list_state: ListState,
     active_session_sidebar_list_cache: RefCell<VirtualListSignatureCache>,
+    // Compact saved-connections navigator owns single-select and menu state
+    // so it never disturbs the full manager tab's batch selection.
+    saved_sidebar_selected: Option<session_manager::SessionManagerSelectionTarget>,
+    saved_sidebar_menu: Option<SavedSidebarMenu>,
+    // Collapsed group paths local to the sidebar navigator. Absence means
+    // expanded, so groups default to expanded without touching the tab.
+    saved_sidebar_collapsed: HashSet<String>,
+    saved_sidebar_list_state: ListState,
+    saved_sidebar_list_cache: RefCell<VirtualListSignatureCache>,
     open_settings_select: Option<SettingsSelect>,
     settings_select_focus_origin: Option<browser_behavior::BrowserFocusOrigin>,
     settings_section_list_state: ListState,

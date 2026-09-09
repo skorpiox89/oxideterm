@@ -118,6 +118,9 @@ impl WorkspaceApp {
             .map(|range| range.start);
         let shows_selection = selection_range.is_some();
         let shows_positioned_caret = caret_offset.is_some() && !shows_selection;
+        // Both search fields share the magnifier affordance.
+        let show_search_icon =
+            target == SessionManagerInput::Search || target == SessionManagerInput::SidebarSearch;
         self.text_input_with_workspace_ime(
             input_target,
             div()
@@ -141,7 +144,7 @@ impl WorkspaceApp {
                 } else {
                     rgb(theme.text)
                 })
-                .when(target == SessionManagerInput::Search, |input| {
+                .when(show_search_icon, |input| {
                     input.child(Self::render_lucide_icon(
                         LucideIcon::Search,
                         16.0,

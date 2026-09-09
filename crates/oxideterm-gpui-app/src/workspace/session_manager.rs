@@ -136,6 +136,9 @@ const OXIDE_NEW_BADGE_BG_ALPHA: u32 = 0x26; // Tauri bg-green-500/15
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub(super) enum SessionManagerInput {
     Search,
+    // Compact sidebar navigator owns a separate query so typing there never
+    // filters the full manager tab behind it.
+    SidebarSearch,
     GroupName,
     OxideImportPassword,
     OxideExportPassword,
@@ -147,6 +150,7 @@ impl SessionManagerInput {
     pub(super) fn anchor_key(self) -> u64 {
         match self {
             Self::Search => 1,
+            Self::SidebarSearch => 2,
             Self::GroupName => 3,
             Self::OxideImportPassword => 4,
             Self::OxideExportPassword => 5,
@@ -334,7 +338,7 @@ impl SessionManagerDrag {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) enum SessionManagerRowActionTarget {
     Connection(String),
     Serial(String),
@@ -420,6 +424,7 @@ pub(super) struct SessionManagerState {
     pub(super) sort_field: SessionSortField,
     pub(super) sort_direction: SortDirection,
     pub(super) search_query: String,
+    pub(super) sidebar_search_query: String,
     pub(super) selected_items: HashSet<SessionManagerSelectionTarget>,
     pub(super) view_mode_menu_open: bool,
     pub(super) sort_menu_open: bool,
@@ -480,6 +485,7 @@ impl Default for SessionManagerState {
             sort_field: SessionSortField::LastUsed,
             sort_direction: SortDirection::Desc,
             search_query: String::new(),
+            sidebar_search_query: String::new(),
             selected_items: HashSet::new(),
             view_mode_menu_open: false,
             sort_menu_open: false,
@@ -639,6 +645,7 @@ impl SessionManagerState {
     pub(in crate::workspace) fn input_value(&self, input: SessionManagerInput) -> Option<&str> {
         match input {
             SessionManagerInput::Search => Some(&self.search_query),
+            SessionManagerInput::SidebarSearch => Some(&self.sidebar_search_query),
             SessionManagerInput::GroupName => Some(&self.group_name_draft),
             SessionManagerInput::OxideImportPassword => self
                 .oxide_import_dialog
@@ -668,6 +675,7 @@ impl SessionManagerState {
     ) -> bool {
         let value = match input {
             SessionManagerInput::Search => &mut self.search_query,
+            SessionManagerInput::SidebarSearch => &mut self.sidebar_search_query,
             SessionManagerInput::GroupName => {
                 self.group_editor_error = None;
                 &mut self.group_name_draft
@@ -1050,12 +1058,18 @@ use self::{
 };
 
 // Preserve the workspace-facing session manager API at its original visibility.
+// The compact sidebar navigator shares the display model and open flows.
 #[cfg(test)]
 pub(in crate::workspace) use self::helpers::save_request_from_form;
 pub(in crate::workspace) use self::helpers::{
     RuntimeSecretHandoff, duplicate_connection_template_name, form_from_saved_connection,
     restore_legacy_jump_host_in_form, save_request_from_form_with_existing_auth,
     save_request_from_form_with_proxy_hop_prefix, upstream_proxy_config_from_form,
+};
+pub(in crate::workspace) use self::views::{
+    SessionManagerDisplayItem, SessionManagerItemPointerAction, SessionManagerOpenTarget,
+    SessionManagerTreeRow, collect_session_group_paths, group_display_name,
+    session_manager_item_pointer_action, session_manager_tree_rows,
 };
 
 #[cfg(test)]

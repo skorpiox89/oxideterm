@@ -1044,6 +1044,9 @@ impl WorkspaceApp {
         if self.close_session_row_menus(cx) {
             changed = true;
         }
+        if self.dismiss_saved_sidebar_menu(cx) {
+            changed = true;
+        }
         if self.dismiss_file_manager_context_menu(cx) {
             changed = true;
         }

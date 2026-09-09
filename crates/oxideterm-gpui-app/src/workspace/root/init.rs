@@ -717,6 +717,20 @@ impl WorkspaceApp {
             )
             .measure_all(),
             active_session_sidebar_list_cache: RefCell::new(VirtualListSignatureCache::default()),
+            saved_sidebar_selected: None,
+            saved_sidebar_menu: None,
+            saved_sidebar_collapsed: HashSet::new(),
+            saved_sidebar_list_state: ListState::new(
+                SAVED_SIDEBAR_LIST_INITIAL_ITEM_COUNT,
+                ListAlignment::Top,
+                TauriVirtualListSpec::new(
+                    px(SAVED_SIDEBAR_LIST_ESTIMATED_HEIGHT),
+                    SAVED_SIDEBAR_LIST_OVERSCAN,
+                )
+                .overdraw(),
+            )
+            .measure_all(),
+            saved_sidebar_list_cache: RefCell::new(VirtualListSignatureCache::default()),
             open_settings_select: None,
             settings_select_focus_origin: None,
             // Settings tabs are variable-height browser sections, not a single

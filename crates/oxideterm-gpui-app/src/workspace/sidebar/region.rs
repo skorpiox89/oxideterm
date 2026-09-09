@@ -415,6 +415,7 @@ impl WorkspaceApp {
             })
             .flatten();
         let title_key = match panel_section {
+            SidebarSection::Connections => "sidebar.panels.saved",
             SidebarSection::Forwards => "forwards.table.title",
             SidebarSection::Extensions => "sidebar.panels.plugins",
             SidebarSection::CloudSync => "plugin.cloud_sync.panel_title",
@@ -476,6 +477,21 @@ impl WorkspaceApp {
                     cx,
                 ));
         }
+        if panel_section == SidebarSection::Connections {
+            // The compact navigator keeps creation inline while full
+            // management (groups/tags/batch/import) stays in the tab.
+            header = header
+                .child(self.render_sidebar_action(
+                    LucideIcon::Plus,
+                    SidebarActionKind::NewConnection,
+                    cx,
+                ))
+                .child(self.render_sidebar_action(
+                    LucideIcon::ExternalLink,
+                    SidebarActionKind::OpenSessionManager,
+                    cx,
+                ));
+        }
         header.into_any_element()
     }
 
@@ -492,6 +508,9 @@ impl WorkspaceApp {
                 ActiveSessionSidebarViewMode::Focus => self.i18n.t("sidebar.tooltips.switch_tree"),
             },
             SidebarActionKind::NewConnection => self.i18n.t("sidebar.tooltips.new_connection"),
+            SidebarActionKind::OpenSessionManager => {
+                self.i18n.t("sidebar.panels.open_session_manager")
+            }
         };
 
         let toggle_focus_active = action == SidebarActionKind::ToggleSessionView
@@ -526,6 +545,9 @@ impl WorkspaceApp {
                         SidebarActionKind::NewConnection => {
                             this.open_new_connection_form(window, cx)
                         }
+                        SidebarActionKind::OpenSessionManager => {
+                            this.open_session_manager_tab(window, cx)
+                        }
                     }
                     cx.stop_propagation();
                 }),
@@ -540,6 +562,9 @@ impl WorkspaceApp {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let panel_section = self.effective_sidebar_panel_section();
+        if panel_section == SidebarSection::Connections {
+            return self.render_saved_connections_sidebar_content(cx);
+        }
         if panel_section == SidebarSection::Sessions {
             let sessions = self.render_active_sessions_sidebar_content(cx);
             if self.embedded_sftp_node_id.is_none() {
@@ -1567,6 +1592,7 @@ pub(in crate::workspace) fn notification_sidebar_row_signatures(
 pub(in crate::workspace) enum SidebarActionKind {
     ToggleSessionView,
     NewConnection,
+    OpenSessionManager,
 }
 
 #[cfg(test)]

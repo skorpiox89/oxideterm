@@ -352,8 +352,6 @@ impl WorkspaceApp {
                 cx.listener(move |this, _event, window, cx| {
                     if section == SidebarSection::Settings {
                         this.open_settings(window, cx);
-                    } else if section == SidebarSection::Connections {
-                        this.open_session_manager_tab(window, cx);
                     } else if section == SidebarSection::Terminal {
                         this.open_connection_runtime_tab(
                             ConnectionRuntimeSection::Overview,
@@ -402,7 +400,7 @@ impl WorkspaceApp {
     pub(in crate::workspace) fn activity_icon_tooltip(&self, section: SidebarSection) -> String {
         match section {
             SidebarSection::Sessions => self.i18n.t("sidebar.panels.sessions"),
-            SidebarSection::Connections => self.i18n.t("sidebar.panels.open_session_manager"),
+            SidebarSection::Connections => self.i18n.t("sidebar.panels.saved"),
             SidebarSection::Forwards => self.i18n.t("forwards.table.title"),
             SidebarSection::Terminal => self.i18n.t("sidebar.panels.runtime_overview"),
             SidebarSection::Runtime => self.i18n.t("sidebar.panels.runtime"),

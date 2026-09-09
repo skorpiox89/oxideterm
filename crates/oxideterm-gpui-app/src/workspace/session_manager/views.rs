@@ -22,7 +22,7 @@ impl Render for SessionManagerDrag {
 }
 
 #[derive(Clone)]
-pub(super) enum SessionManagerDisplayItem {
+pub(in crate::workspace) enum SessionManagerDisplayItem {
     Connection(ConnectionInfo),
     SshConfig(SessionManagerSshConfigDisplayItem),
     Serial(SerialProfile),
@@ -33,7 +33,7 @@ pub(super) enum SessionManagerDisplayItem {
 }
 
 #[derive(Clone)]
-pub(super) struct SessionManagerSshConfigDisplayItem {
+pub(in crate::workspace) struct SessionManagerSshConfigDisplayItem {
     alias: String,
     hostname: Option<String>,
     user: Option<String>,
@@ -55,7 +55,7 @@ impl From<&SshConfigHost> for SessionManagerSshConfigDisplayItem {
 }
 
 #[derive(Clone)]
-pub(super) enum SessionManagerOpenTarget {
+pub(in crate::workspace) enum SessionManagerOpenTarget {
     Connection(String),
     SshConfig(String),
     Serial(String),
@@ -81,7 +81,7 @@ pub(super) enum SessionManagerGridRow {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) enum SessionManagerTreeRow {
+pub(in crate::workspace) enum SessionManagerTreeRow {
     Group {
         path: String,
         depth: usize,
@@ -95,14 +95,14 @@ pub(super) enum SessionManagerTreeRow {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum SessionManagerItemPointerAction {
+pub(in crate::workspace) enum SessionManagerItemPointerAction {
     None,
     Select,
     Open,
 }
 
 /// Keeps card and list-row pointer behavior aligned across Session Manager layouts.
-pub(super) fn session_manager_item_pointer_action(
+pub(in crate::workspace) fn session_manager_item_pointer_action(
     click_count: usize,
     selectable: bool,
 ) -> SessionManagerItemPointerAction {
@@ -114,7 +114,7 @@ pub(super) fn session_manager_item_pointer_action(
 }
 
 impl SessionManagerDisplayItem {
-    pub(super) fn id(&self) -> &str {
+    pub(in crate::workspace) fn id(&self) -> &str {
         match self {
             Self::Connection(connection) => &connection.id,
             Self::SshConfig(host) => &host.alias,
@@ -126,7 +126,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn selection_target(&self) -> Option<SessionManagerSelectionTarget> {
+    pub(in crate::workspace) fn selection_target(&self) -> Option<SessionManagerSelectionTarget> {
         // Only SSH config discoveries are transient; every saved profile can use batch actions.
         match self {
             Self::Connection(connection) => Some(SessionManagerSelectionTarget::Connection(
@@ -149,7 +149,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn row_action_target(&self) -> Option<SessionManagerRowActionTarget> {
+    pub(in crate::workspace) fn row_action_target(&self) -> Option<SessionManagerRowActionTarget> {
         // SSH config discoveries are not persisted rows and therefore have no delete menu.
         match self {
             Self::Connection(connection) => Some(SessionManagerRowActionTarget::Connection(
@@ -172,7 +172,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn open_target(&self) -> SessionManagerOpenTarget {
+    pub(in crate::workspace) fn open_target(&self) -> SessionManagerOpenTarget {
         match self {
             Self::Connection(connection) => {
                 SessionManagerOpenTarget::Connection(connection.id.clone())
@@ -190,7 +190,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn name(&self) -> &str {
+    pub(in crate::workspace) fn name(&self) -> &str {
         match self {
             Self::Connection(connection) => &connection.name,
             Self::SshConfig(host) => &host.alias,
@@ -202,7 +202,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn group(&self) -> Option<&str> {
+    pub(in crate::workspace) fn group(&self) -> Option<&str> {
         match self {
             Self::Connection(connection) => connection.group.as_deref(),
             Self::SshConfig(_) => None,
@@ -273,7 +273,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn subtitle(&self) -> String {
+    pub(in crate::workspace) fn subtitle(&self) -> String {
         match self {
             Self::Connection(connection) => {
                 format!(
@@ -363,7 +363,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(super) fn icon(&self) -> LucideIcon {
+    pub(in crate::workspace) fn icon(&self) -> LucideIcon {
         match self {
             Self::Connection(connection) => {
                 session_icons::session_icon_from_id(connection.icon.as_deref())
@@ -432,6 +432,31 @@ impl WorkspaceApp {
             .search_query
             .trim()
             .to_lowercase();
+        self.session_manager_display_items_with_query(&query, true, cx)
+    }
+
+    /// Compact sidebar navigator shares the tab's display model without SSH
+    /// config discoveries: it only lists persisted profiles and never filters
+    /// the full manager behind it.
+    pub(in crate::workspace) fn saved_sidebar_display_items(
+        &self,
+        cx: &App,
+    ) -> Vec<SessionManagerDisplayItem> {
+        let query = self
+            .session_manager
+            .read(cx)
+            .sidebar_search_query
+            .trim()
+            .to_lowercase();
+        self.session_manager_display_items_with_query(&query, false, cx)
+    }
+
+    fn session_manager_display_items_with_query(
+        &self,
+        query: &str,
+        include_ssh_config: bool,
+        cx: &App,
+    ) -> Vec<SessionManagerDisplayItem> {
         let mut items = self
             .connection_store
             .connection_infos()
@@ -477,13 +502,11 @@ impl WorkspaceApp {
                     .read(cx)
                     .ssh_config_hosts
                     .iter()
-                    .filter(|host| !host.already_imported)
+                    .filter(|host| include_ssh_config && !host.already_imported)
                     .map(SessionManagerSshConfigDisplayItem::from)
                     .map(SessionManagerDisplayItem::SshConfig),
             )
-            .filter(|item| {
-                query.is_empty() || item.search_text().to_lowercase().contains(query.as_str())
-            })
+            .filter(|item| query.is_empty() || item.search_text().to_lowercase().contains(query))
             .collect::<Vec<_>>();
         self.sort_session_manager_display_items(&mut items, cx);
         items
@@ -2514,7 +2537,7 @@ impl WorkspaceApp {
         )
     }
 
-    pub(super) fn open_session_manager_target(
+    pub(in crate::workspace) fn open_session_manager_target(
         &mut self,
         target: SessionManagerOpenTarget,
         window: &mut Window,
@@ -2622,7 +2645,7 @@ fn push_session_manager_grid_section(
     }
 }
 
-pub(super) fn session_manager_tree_rows(
+pub(in crate::workspace) fn session_manager_tree_rows(
     items: &[SessionManagerDisplayItem],
     roots: &[String],
     children: &HashMap<String, Vec<String>>,
@@ -2809,11 +2832,11 @@ fn hash_session_manager_row_items(
     }
 }
 
-pub(super) fn group_display_name(group: &str) -> String {
+pub(in crate::workspace) fn group_display_name(group: &str) -> String {
     group.rsplit('/').next().unwrap_or(group).to_string()
 }
 
-pub(super) fn collect_session_group_paths(
+pub(in crate::workspace) fn collect_session_group_paths(
     roots: &[String],
     children: &HashMap<String, Vec<String>>,
     output: &mut HashSet<String>,
@@ -2847,6 +2870,12 @@ mod session_manager_pointer_tests {
         assert_eq!(
             session_manager_item_pointer_action(2, false),
             SessionManagerItemPointerAction::Open
+        );
+        // Higher click counts stay inert so triple-click never triggers
+        // a connect in either the tab or the compact sidebar navigator.
+        assert_eq!(
+            session_manager_item_pointer_action(3, true),
+            SessionManagerItemPointerAction::None
         );
     }
 }

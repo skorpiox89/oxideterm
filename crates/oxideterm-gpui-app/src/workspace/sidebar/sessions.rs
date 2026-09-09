@@ -2068,6 +2068,52 @@ impl WorkspaceApp {
         )
     }
 
+    /// Saved-profile identities behind every live surface. The compact
+    /// saved-connections navigator uses it for its connected indicator;
+    /// SSH nodes carry the id directly while standalone records resolve it
+    /// through their saved/restored launch plans.
+    pub(in crate::workspace) fn active_saved_connection_ids(&self, cx: &App) -> HashSet<String> {
+        let mut ids = HashSet::new();
+        for row in self.active_session_sidebar_rows(cx) {
+            if let Some(saved_id) = row.saved_connection_id {
+                ids.insert(saved_id);
+            }
+            let Some(session) = row.standalone_session else {
+                continue;
+            };
+            let profile_id = self
+                .standalone_connections
+                .record(&session.connection_id)
+                .and_then(|record| match &record.launch {
+                    standalone_connections::StandaloneConnectionLaunch::SavedSerial {
+                        profile_id,
+                        ..
+                    }
+                    | standalone_connections::StandaloneConnectionLaunch::SavedTelnet {
+                        profile_id,
+                        ..
+                    }
+                    | standalone_connections::StandaloneConnectionLaunch::SavedMosh {
+                        profile_id,
+                    }
+                    | standalone_connections::StandaloneConnectionLaunch::SavedRemoteDesktop {
+                        profile_id,
+                    } => Some(profile_id.clone()),
+                    standalone_connections::StandaloneConnectionLaunch::RestoredMosh {
+                        profile,
+                    } => Some(profile.id.clone()),
+                    standalone_connections::StandaloneConnectionLaunch::RestoredRemoteDesktop {
+                        profile,
+                    } => Some(profile.id.clone()),
+                    _ => None,
+                });
+            if let Some(profile_id) = profile_id {
+                ids.insert(profile_id);
+            }
+        }
+        ids
+    }
+
     pub(in crate::workspace) fn session_node_status(
         &self,
         status: ActiveSessionStatus,

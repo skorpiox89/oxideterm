@@ -84,7 +84,9 @@ impl WorkspaceApp {
             + remote_desktop_count
     }
 
-    pub(super) fn session_group_tree(&self) -> (Vec<String>, HashMap<String, Vec<String>>) {
+    pub(in crate::workspace) fn session_group_tree(
+        &self,
+    ) -> (Vec<String>, HashMap<String, Vec<String>>) {
         let mut paths = HashSet::new();
         for group in self.connection_store.groups() {
             add_group_path_segments(group, &mut paths);
@@ -134,7 +136,11 @@ impl WorkspaceApp {
         (roots, children)
     }
 
-    pub(super) fn toggle_session_group_expanded(&mut self, group: &str, cx: &mut Context<Self>) {
+    pub(in crate::workspace) fn toggle_session_group_expanded(
+        &mut self,
+        group: &str,
+        cx: &mut Context<Self>,
+    ) {
         self.session_manager.update(cx, |session_manager, cx| {
             if session_manager.expanded_groups.contains(group) {
                 session_manager.expanded_groups.remove(group);
@@ -944,7 +950,7 @@ impl WorkspaceApp {
         }
     }
 
-    pub(super) fn open_saved_serial_profile_editor(
+    pub(in crate::workspace) fn open_saved_serial_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1010,7 +1016,7 @@ impl WorkspaceApp {
         }
     }
 
-    pub(super) fn open_saved_telnet_profile_editor(
+    pub(in crate::workspace) fn open_saved_telnet_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1158,7 +1164,7 @@ impl WorkspaceApp {
         self.queue_cloud_sync_dirty_refresh(cx);
     }
 
-    pub(super) fn open_saved_remote_desktop_profile_editor(
+    pub(in crate::workspace) fn open_saved_remote_desktop_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1192,7 +1198,7 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(super) fn open_saved_standalone_sftp_profile_editor(
+    pub(in crate::workspace) fn open_saved_standalone_sftp_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
