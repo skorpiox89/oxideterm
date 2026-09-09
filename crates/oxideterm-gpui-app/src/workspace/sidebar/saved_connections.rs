@@ -1,8 +1,7 @@
 use super::super::session_manager::{
     SessionManagerDisplayItem, SessionManagerInput, SessionManagerItemPointerAction,
-    SessionManagerOpenTarget, SessionManagerRowActionTarget, SessionManagerSelectionTarget,
-    SessionManagerTreeRow, collect_session_group_paths, group_display_name,
-    session_manager_item_pointer_action, session_manager_tree_rows,
+    SessionManagerSelectionTarget, SessionManagerTreeRow, collect_session_group_paths,
+    group_display_name, session_manager_item_pointer_action, session_manager_tree_rows,
 };
 use super::*;
 use std::{
@@ -11,13 +10,9 @@ use std::{
 };
 
 // Compact saved-connections navigator. It shares the full manager tab's
-// display model (filter/sort/grouping/open flows) but owns its search query,
-// single selection, and menu state so the tab's batch selection is untouched.
-#[derive(Clone, Debug)]
-pub(in crate::workspace) struct SavedSidebarMenu {
-    target: SessionManagerRowActionTarget,
-}
-
+// display model (filter/sort/grouping/open flows) but owns its search query
+// and single selection so the tab's batch selection is untouched. Editing
+// stays in the full manager; rows intentionally have no context menu.
 impl WorkspaceApp {
     pub(in crate::workspace) fn render_saved_connections_sidebar_content(
         &mut self,
@@ -33,14 +28,6 @@ impl WorkspaceApp {
         {
             self.saved_sidebar_selected = None;
         }
-        if let Some(menu) = self.saved_sidebar_menu.clone()
-            && items
-                .iter()
-                .all(|item| item.row_action_target() != Some(menu.target.clone()))
-        {
-            self.saved_sidebar_menu = None;
-        }
-
         let (roots, children) = self.session_group_tree();
         // The sidebar defaults every group to expanded and tracks only the
         // collapsed ones locally, leaving the manager tab's expansion alone.
@@ -153,13 +140,12 @@ impl WorkspaceApp {
         _cx: &App,
     ) {
         let selected = self.saved_sidebar_selected.clone();
-        let menu_target = self.saved_sidebar_menu.clone().map(|menu| menu.target);
         let signatures = rows
             .iter()
             .map(|row| {
                 let mut hasher = DefaultHasher::new();
-                // Row height changes when the inline menu opens beneath it;
-                // hash selection and menu ownership alongside row identity.
+                // Hash selection alongside row identity so virtual rows
+                // remeasure when highlight state changes.
                 match row {
                     SessionManagerTreeRow::Group { path, expanded, .. } => {
                         path.hash(&mut hasher);
@@ -172,12 +158,6 @@ impl WorkspaceApp {
                             item.subtitle().hash(&mut hasher);
                             (item.selection_target() == selected).hash(&mut hasher);
                             saved_sidebar_item_connected(item, connected).hash(&mut hasher);
-                            menu_target
-                                .as_ref()
-                                .is_some_and(|target| {
-                                    item.row_action_target().as_ref() == Some(target)
-                                })
-                                .hash(&mut hasher);
                         } else {
                             item_index.hash(&mut hasher);
                         }
@@ -306,16 +286,6 @@ impl WorkspaceApp {
         let item_connected = saved_sidebar_item_connected(item, connected);
         let select_target = item.selection_target();
         let open_target = item.open_target();
-        // Each pointer closure owns its copy; the row keeps the originals
-        // for the inline menu rendered below.
-        let left_open_target = open_target.clone();
-        let left_select_target = select_target.clone();
-        let menu_target = item.row_action_target();
-        let menu_open = menu_target.as_ref().is_some_and(|target| {
-            self.saved_sidebar_menu
-                .as_ref()
-                .is_some_and(|menu| menu.target == *target)
-        });
         // Single-line rows mirror the active-sessions node recipe: same
         // height, icon/text sizes, selection chrome, and hover behavior.
         let row = div()
@@ -346,29 +316,14 @@ impl WorkspaceApp {
                 cx.listener(move |this, event: &MouseDownEvent, window, cx| {
                     match session_manager_item_pointer_action(event.click_count, true) {
                         SessionManagerItemPointerAction::Open => {
-                            this.saved_sidebar_menu = None;
-                            this.open_session_manager_target(left_open_target.clone(), window, cx);
+                            this.open_session_manager_target(open_target.clone(), window, cx);
                         }
                         SessionManagerItemPointerAction::Select => {
-                            this.saved_sidebar_menu = None;
-                            this.saved_sidebar_selected = left_select_target.clone();
+                            this.saved_sidebar_selected = select_target.clone();
                             cx.notify();
                         }
                         SessionManagerItemPointerAction::None => {}
                     }
-                    cx.stop_propagation();
-                }),
-            )
-            .on_mouse_down(
-                MouseButton::Right,
-                cx.listener(move |this, _event, _window, cx| {
-                    // Right-click selects the row first so the inline menu
-                    // actions always operate on the visible selection.
-                    this.saved_sidebar_selected = select_target.clone();
-                    this.saved_sidebar_menu = menu_target
-                        .clone()
-                        .map(|target| SavedSidebarMenu { target });
-                    cx.notify();
                     cx.stop_propagation();
                 }),
             )
@@ -396,137 +351,7 @@ impl WorkspaceApp {
                     self.session_node_status(ActiveSessionStatus::Connected),
                 ))
             });
-        if menu_open && let Some(menu) = self.saved_sidebar_menu.clone() {
-            return row
-                .child(self.render_saved_sidebar_menu(menu, open_target, cx))
-                .into_any_element();
-        }
         row.into_any_element()
-    }
-
-    fn render_saved_sidebar_menu(
-        &self,
-        menu: SavedSidebarMenu,
-        open_target: SessionManagerOpenTarget,
-        cx: &mut Context<Self>,
-    ) -> AnyElement {
-        let theme = self.tokens.ui;
-        let open_target = Some(open_target);
-        let edit_target = menu.target.clone();
-        let connect_label = self.i18n.t("sessionManager.actions.connect");
-        let edit_label = self.i18n.t("sessionManager.actions.edit");
-        oxideterm_gpui_ui::context_menu::context_menu_event_boundary(
-            div()
-                .w_full()
-                .my(px(4.0))
-                .py_1()
-                .rounded(px(self.tokens.radii.md))
-                .border_1()
-                .border_color(rgb(theme.border))
-                .bg(rgb(theme.bg_elevated))
-                .shadow_lg()
-                .child(
-                    self.workspace_context_menu_action(
-                        div()
-                            .w_full()
-                            .px_3()
-                            .py_1()
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .text_size(px(SESSION_TREE_TEXT_SIZE))
-                            .text_color(rgb(theme.text))
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::Play,
-                                SESSION_TREE_CHILD_ICON_SIZE,
-                                rgb(theme.text_muted),
-                            ))
-                            .child(connect_label),
-                        false,
-                        false,
-                        |this| {
-                            this.saved_sidebar_menu = None;
-                        },
-                        move |this, _event, window, cx| {
-                            if let Some(target) = open_target.clone() {
-                                this.open_session_manager_target(target, window, cx);
-                            }
-                        },
-                        cx,
-                    ),
-                )
-                .child(
-                    self.workspace_context_menu_action(
-                        div()
-                            .w_full()
-                            .px_3()
-                            .py_1()
-                            .flex()
-                            .items_center()
-                            .gap_2()
-                            .text_size(px(SESSION_TREE_TEXT_SIZE))
-                            .text_color(rgb(theme.text))
-                            .child(Self::render_lucide_icon(
-                                LucideIcon::Pencil,
-                                SESSION_TREE_CHILD_ICON_SIZE,
-                                rgb(theme.text_muted),
-                            ))
-                            .child(edit_label),
-                        false,
-                        false,
-                        |this| {
-                            this.saved_sidebar_menu = None;
-                        },
-                        move |this, _event, window, cx| {
-                            this.open_saved_sidebar_editor_target(&edit_target, window, cx);
-                        },
-                        cx,
-                    ),
-                ),
-        )
-        .into_any_element()
-    }
-
-    fn open_saved_sidebar_editor_target(
-        &mut self,
-        target: &SessionManagerRowActionTarget,
-        window: &mut Window,
-        cx: &mut Context<Self>,
-    ) {
-        // Reuse the full manager's per-type editors; the sidebar never edits inline.
-        match target {
-            SessionManagerRowActionTarget::Connection(id) => {
-                self.open_saved_connection_editor(id, None, window, cx)
-            }
-            SessionManagerRowActionTarget::Serial(id) => {
-                self.open_saved_serial_profile_editor(id, window, cx)
-            }
-            SessionManagerRowActionTarget::Telnet(id) => {
-                self.open_saved_telnet_profile_editor(id, window, cx)
-            }
-            SessionManagerRowActionTarget::Mosh(id) => {
-                self.open_saved_mosh_profile_editor(id, window, cx)
-            }
-            SessionManagerRowActionTarget::StandaloneSftp(id) => {
-                self.open_saved_standalone_sftp_profile_editor(id, window, cx)
-            }
-            SessionManagerRowActionTarget::RemoteDesktop(id) => {
-                self.open_saved_remote_desktop_profile_editor(id, window, cx)
-            }
-            SessionManagerRowActionTarget::GroupRoot | SessionManagerRowActionTarget::Group(_) => {}
-        }
-    }
-
-    pub(in crate::workspace) fn dismiss_saved_sidebar_menu(
-        &mut self,
-        cx: &mut Context<Self>,
-    ) -> bool {
-        if self.saved_sidebar_menu.is_none() {
-            return false;
-        }
-        self.saved_sidebar_menu = None;
-        cx.notify();
-        true
     }
 }
 

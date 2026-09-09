@@ -338,7 +338,7 @@ impl SessionManagerDrag {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(super) enum SessionManagerRowActionTarget {
     Connection(String),
     Serial(String),
@@ -1067,9 +1067,9 @@ pub(in crate::workspace) use self::helpers::{
     save_request_from_form_with_proxy_hop_prefix, upstream_proxy_config_from_form,
 };
 pub(in crate::workspace) use self::views::{
-    SessionManagerDisplayItem, SessionManagerItemPointerAction, SessionManagerOpenTarget,
-    SessionManagerTreeRow, collect_session_group_paths, group_display_name,
-    session_manager_item_pointer_action, session_manager_tree_rows,
+    SessionManagerDisplayItem, SessionManagerItemPointerAction, SessionManagerTreeRow,
+    collect_session_group_paths, group_display_name, session_manager_item_pointer_action,
+    session_manager_tree_rows,
 };
 
 #[cfg(test)]

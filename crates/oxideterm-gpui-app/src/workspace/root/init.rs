@@ -718,7 +718,6 @@ impl WorkspaceApp {
             .measure_all(),
             active_session_sidebar_list_cache: RefCell::new(VirtualListSignatureCache::default()),
             saved_sidebar_selected: None,
-            saved_sidebar_menu: None,
             saved_sidebar_collapsed: HashSet::new(),
             saved_sidebar_list_state: ListState::new(
                 SAVED_SIDEBAR_LIST_INITIAL_ITEM_COUNT,

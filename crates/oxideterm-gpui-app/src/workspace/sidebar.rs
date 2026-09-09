@@ -201,7 +201,6 @@ pub(in crate::workspace) use ai::{
     handle_acp_application_tool_call,
 };
 use helpers::*;
-pub(in crate::workspace) use saved_connections::SavedSidebarMenu;
 pub(in crate::workspace) use state::{
     clamp_responsive_sidebar_width, context_sidebar_panel_visible,
 };

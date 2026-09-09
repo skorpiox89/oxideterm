@@ -295,7 +295,7 @@ use self::session_manager::{SessionManagerState, SessionManagerWorkspaceEvent};
 use self::sidebar::AiInlinePanelState;
 #[cfg(test)]
 use self::sidebar::AiStreamDeliveryEvent;
-use self::sidebar::{ActiveSessionSidebarViewMode, SavedSidebarMenu, SidebarSection};
+use self::sidebar::{ActiveSessionSidebarViewMode, SidebarSection};
 use self::sidebar::{
     AiCompactionDelivery, AiCompactionDeliverySender, AiStreamDelivery, AiStreamDeliverySender,
     ai_now_ms,
@@ -825,7 +825,6 @@ pub(crate) struct WorkspaceApp {
     // Compact saved-connections navigator owns single-select and menu state
     // so it never disturbs the full manager tab's batch selection.
     saved_sidebar_selected: Option<session_manager::SessionManagerSelectionTarget>,
-    saved_sidebar_menu: Option<SavedSidebarMenu>,
     // Collapsed group paths local to the sidebar navigator. Absence means
     // expanded, so groups default to expanded without touching the tab.
     saved_sidebar_collapsed: HashSet<String>,

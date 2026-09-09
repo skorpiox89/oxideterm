@@ -149,7 +149,7 @@ impl SessionManagerDisplayItem {
         }
     }
 
-    pub(in crate::workspace) fn row_action_target(&self) -> Option<SessionManagerRowActionTarget> {
+    pub(super) fn row_action_target(&self) -> Option<SessionManagerRowActionTarget> {
         // SSH config discoveries are not persisted rows and therefore have no delete menu.
         match self {
             Self::Connection(connection) => Some(SessionManagerRowActionTarget::Connection(

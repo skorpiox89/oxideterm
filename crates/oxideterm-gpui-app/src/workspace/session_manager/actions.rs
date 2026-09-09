@@ -950,7 +950,7 @@ impl WorkspaceApp {
         }
     }
 
-    pub(in crate::workspace) fn open_saved_serial_profile_editor(
+    pub(super) fn open_saved_serial_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1016,7 +1016,7 @@ impl WorkspaceApp {
         }
     }
 
-    pub(in crate::workspace) fn open_saved_telnet_profile_editor(
+    pub(super) fn open_saved_telnet_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1164,7 +1164,7 @@ impl WorkspaceApp {
         self.queue_cloud_sync_dirty_refresh(cx);
     }
 
-    pub(in crate::workspace) fn open_saved_remote_desktop_profile_editor(
+    pub(super) fn open_saved_remote_desktop_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
@@ -1198,7 +1198,7 @@ impl WorkspaceApp {
         cx.notify();
     }
 
-    pub(in crate::workspace) fn open_saved_standalone_sftp_profile_editor(
+    pub(super) fn open_saved_standalone_sftp_profile_editor(
         &mut self,
         id: &str,
         window: &mut Window,
